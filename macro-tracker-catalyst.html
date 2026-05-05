@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macro Tracker + Catalyst Calendar</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#151c2b;color:#e8eaf0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding:1.5rem 1.25rem 3rem}
+.page{max-width:1050px;margin:0 auto}
+
+/* TABS */
+.tabs{display:flex;gap:0;margin-bottom:1.75rem;background:#0f1520;border-radius:10px;padding:4px;width:fit-content}
+.tab{padding:7px 22px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:#556;border:none;background:transparent;transition:all .18s;letter-spacing:.04em}
+.tab.active{background:#1e2d47;color:#e8eaf0}
+.tab:hover:not(.active){color:#aaa}
+.view{display:none}.view.active{display:block}
+
+/* PAGE HEADER */
+.pg-title{font-size:20px;font-weight:700;margin-bottom:.25rem}
+.pg-sub{font-size:12px;color:#556;margin-bottom:1.5rem}
+
+/* ═══════════════════════════════════════
+   MACRO TRACKER
+═══════════════════════════════════════ */
+.cat-block{margin-bottom:1.75rem}
+.cat-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.35rem .8rem;border-radius:5px;display:inline-block;margin-bottom:.65rem}
+.cat-jobs{background:rgba(168,126,232,0.15);color:#a87ee8}
+.cat-infl{background:rgba(240,112,96,0.15);color:#f07060}
+.cat-act{background:rgba(74,157,232,0.15);color:#4a9de8}
+
+/* METRIC ROW */
+.metric-row{display:grid;grid-template-columns:170px 80px 90px 90px 90px 1fr 110px;gap:0;border:.5px solid rgba(255,255,255,0.07);border-radius:8px;overflow:hidden;margin-bottom:6px;background:#141a28;align-items:stretch}
+.metric-row:hover{border-color:rgba(255,255,255,0.13)}
+.mc{padding:.55rem .7rem;border-right:.5px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;justify-content:center}
+.mc:last-child{border-right:none}
+.mc-name{font-size:12px;font-weight:600;color:#c8d0e0;line-height:1.3}
+.mc-freq{font-size:9px;color:#445;margin-top:1px}
+.mc-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#445;margin-bottom:2px}
+.mc-val{font-size:13px;font-weight:700;line-height:1.2}
+.mc-date{font-size:9px;color:#556;margin-top:2px}
+
+/* VALUE COLOURS */
+.v-hot{color:#f07060}
+.v-warm{color:#e8a835}
+.v-ok{color:#4cba8c}
+.v-na{color:#445}
+.v-pending{color:#556;font-size:11px;font-weight:400}
+
+/* SIGNAL PILL */
+.signal{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.sig-qt{background:rgba(240,112,96,0.18);color:#f07060}
+.sig-qe{background:rgba(76,186,140,0.18);color:#4cba8c}
+.sig-neu{background:rgba(136,136,136,0.15);color:#888}
+.sig-watch{background:rgba(232,168,53,0.18);color:#e8a835}
+
+/* THRESHOLD MINI BARS */
+.thresh{display:flex;flex-direction:column;gap:2px;padding:.55rem .7rem}
+.t-row{display:flex;align-items:center;gap:5px}
+.t-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.t-text{font-size:9.5px;color:#667;line-height:1.3}
+.t-hot{background:#f07060}
+.t-ok{background:#e8a835}
+.t-low{background:#4cba8c}
+
+/* INTERP BOX */
+.interp{font-size:10.5px;color:#778;line-height:1.5;padding:.55rem .7rem;border-left:.5px solid rgba(255,255,255,0.06)}
+
+/* SECTION NOTE */
+.sec-note{font-size:10px;color:#445;margin-bottom:.5rem;padding-left:2px}
+
+/* RESPONSIVE */
+@media(max-width:800px){
+  .metric-row{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+  .mc{border-right:none;border-bottom:.5px solid rgba(255,255,255,0.06)}
+}
+
+/* ═══════════════════════════════════════
+   CATALYST CALENDAR
+═══════════════════════════════════════ */
+.cal-tabs{display:flex;gap:6px;margin-bottom:1.25rem}
+.cal-tab{padding:5px 16px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;color:#556;border:.5px solid rgba(255,255,255,0.08);background:transparent;transition:all .15s}
+.cal-tab.active{background:#1e2d47;color:#e8eaf0;border-color:#2a3d5e}
+.cal-view{display:none}.cal-view.active{display:block}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:110px}
+.timeline::before{content:'';position:absolute;left:100px;top:14px;bottom:14px;width:1.5px;background:linear-gradient(to bottom,transparent,#2a3a55 5%,#2a3a55 95%,transparent)}
+
+/* EVENT */
+.ev{position:relative;margin-bottom:10px}
+.ev-date{position:absolute;left:-110px;width:92px;text-align:right;padding-top:7px}
+.ev-d1{font-size:12px;font-weight:700;line-height:1.2}
+.ev-d2{font-size:9px;color:#445;margin-top:1px}
+.ev-dot{position:absolute;left:-9px;width:14px;height:14px;border-radius:50%;border:2px solid;margin-top:7px;z-index:1;background:#151c2b}
+
+/* EVENT CARD — always-visible summary + expandable trades */
+.ev-card{border:1.5px solid;border-radius:9px;overflow:hidden}
+
+/* TOP ROW: title + move badge + chevron */
+.ev-top{display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem .45rem;gap:10px}
+.ev-htitle{font-size:13px;font-weight:600;flex:1;line-height:1.3}
+.ev-hmeta{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ev-move{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap}
+
+/* SUMMARY ROW — always visible */
+.ev-summary{display:flex;gap:0;border-top:.5px solid rgba(255,255,255,0.06);border-bottom:.5px solid rgba(255,255,255,0.06)}
+.sum-item{flex:1;padding:.4rem .7rem;border-right:.5px solid rgba(255,255,255,0.06)}
+.sum-item:last-child{border-right:none}
+.sum-lbl{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#445;margin-bottom:2px}
+.sum-val{font-size:11px;font-weight:600;line-height:1.3;color:#c8d0e0}
+.sum-sub{font-size:10px;color:#667;margin-top:1px;line-height:1.35}
+
+/* TRADE EXPAND TRIGGER */
+.ev-trigger{display:flex;align-items:center;justify-content:space-between;padding:.38rem .85rem;cursor:pointer;user-select:none}
+.ev-trigger:hover{filter:brightness(1.1)}
+.ev-trigger-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#445}
+.ev-chevron{font-size:10px;color:#445;transition:transform .2s}
+.ev-chevron.open{transform:rotate(180deg)}
+
+/* EXPANDED TRADE PANEL */
+.ev-body{display:none;padding:.6rem .85rem .75rem;border-top:.5px solid rgba(255,255,255,0.07)}
+.ev-body.open{display:block}
+.trade-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem .8rem}
+@media(max-width:620px){.trade-grid{grid-template-columns:1fr 1fr}}
+.tg-item{}
+.tg-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#445;margin-bottom:2px}
+.tg-val{font-size:11.5px;font-weight:600;line-height:1.35;color:#c8d0e0}
+.tg-sub{font-size:10px;color:#667;margin-top:1px;line-height:1.4}
+.ev-context{font-size:10.5px;color:#667;line-height:1.55;margin-top:.5rem;padding-top:.5rem;border-top:.5px solid rgba(255,255,255,0.06)}
+
+/* CAT COLOURS */
+.c-ai .ev-d1{color:#f5a623}.c-ai .ev-dot{border-color:#f5a623}.c-ai .ev-card{border-color:rgba(245,166,35,.4);background:rgba(245,166,35,.025)}.c-ai .ev-htitle{color:#fbbf44}
+.c-ai .ev-move{background:rgba(245,166,35,.18);color:#f5a623}.c-ai .ev-trigger{background:rgba(245,166,35,.04)}
+.c-crypto .ev-d1{color:#4a9de8}.c-crypto .ev-dot{border-color:#4a9de8}.c-crypto .ev-card{border-color:rgba(74,157,232,.4);background:rgba(74,157,232,.025)}.c-crypto .ev-htitle{color:#60b0f5}
+.c-crypto .ev-move{background:rgba(74,157,232,.18);color:#4a9de8}.c-crypto .ev-trigger{background:rgba(74,157,232,.04)}
+.c-data .ev-d1{color:#f07060}.c-data .ev-dot{border-color:#f07060}.c-data .ev-card{border-color:rgba(240,112,96,.4);background:rgba(240,112,96,.025)}.c-data .ev-htitle{color:#f58070}
+.c-data .ev-move{background:rgba(240,112,96,.18);color:#f07060}.c-data .ev-trigger{background:rgba(240,112,96,.04)}
+.c-fed .ev-d1{color:#a87ee8}.c-fed .ev-dot{border-color:#a87ee8}.c-fed .ev-card{border-color:rgba(168,126,232,.4);background:rgba(168,126,232,.025)}.c-fed .ev-htitle{color:#b890f0}
+.c-fed .ev-move{background:rgba(168,126,232,.18);color:#a87ee8}.c-fed .ev-trigger{background:rgba(168,126,232,.04)}
+.c-geo .ev-d1{color:#4cba8c}.c-geo .ev-dot{border-color:#4cba8c}.c-geo .ev-card{border-color:rgba(76,186,140,.4);background:rgba(76,186,140,.025)}.c-geo .ev-htitle{color:#5dd0a0}
+.c-geo .ev-move{background:rgba(76,186,140,.18);color:#4cba8c}.c-geo .ev-trigger{background:rgba(76,186,140,.04)}
+.c-ipo .ev-d1{color:#c080e0}.c-ipo .ev-dot{border-color:#c080e0}.c-ipo .ev-card{border-color:rgba(192,128,224,.4);background:rgba(192,128,224,.025)}.c-ipo .ev-htitle{color:#d090f0}
+.c-ipo .ev-move{background:rgba(192,128,224,.18);color:#c080e0}.c-ipo .ev-trigger{background:rgba(192,128,224,.04)}
+
+/* DIVIDER */
+.wk-div{text-align:center;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#2a3a55;font-weight:700;margin:14px 0 12px;padding-left:110px}
+.wk-div::before,.wk-div::after{content:'';display:inline-block;width:40px;height:1px;background:#2a3a55;vertical-align:middle;margin:0 8px}
+
+/* LEGEND */
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.1rem;padding:.5rem .8rem;background:#0f1520;border-radius:7px;align-items:center}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#667}
+.leg-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('macro',event)">📊 Macro Data Tracker</button>
+  <button class="tab" onclick="switchTab('catalyst',event)">📅 Catalyst Calendar</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!--  TAB 1 — MACRO DATA TRACKER                    -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="view-macro" class="view active">
+<div class="pg-title">Macro Data Tracker</div>
+<div class="pg-sub">Your thresholds · QT / QE signal · release dates · expected vs actual vs previous · May 2026</div>
+
+<!-- COLUMN HEADERS -->
+<div style="display:grid;grid-template-columns:170px 80px 90px 90px 90px 1fr 110px;gap:0;padding:0 0 .35rem;color:#445;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em">
+  <div style="padding:0 .7rem">Indicator</div>
+  <div style="padding:0 .7rem">Release</div>
+  <div style="padding:0 .7rem">Previous</div>
+  <div style="padding:0 .7rem">Expected</div>
+  <div style="padding:0 .7rem">Actual</div>
+  <div style="padding:0 .7rem">Thresholds</div>
+  <div style="padding:0 .7rem">Signal</div>
+</div>
+
+<!-- ── JOB MARKET ── -->
+<div class="cat-block">
+<span class="cat-label cat-jobs">⬟ Job Market</span>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">Unemployment Rate</div><div class="mc-freq">Monthly · BLS</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 2</div><div class="mc-date">Apr data · done</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-ok">4.3%</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-na">4.4%</div><div class="mc-date">Consensus</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">Pending</div><div class="mc-date">May 2 print</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;5.5% — weak economy</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">4–5.5% — normal</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;4% — strong economy</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-neu">● Neutral</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">4.3% = normal band. Rising trend from 4.0% Jan 24. Watch for spike above 4.5% = Fed forced to expand.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">Initial Jobless Claims</div><div class="mc-freq">Weekly · DOL · Thu</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">Every Thu</div><div class="mc-date">Next: May 8</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-ok">~230K</div><div class="mc-date">Last week</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-na">~235K</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">May 8</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;350K — weak economy</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">250–350K — normal</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;250K — strong economy</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-neu">● Neutral</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">~230K = strong zone. War-related layoffs not yet showing. Watch for sustained rise above 280K as blockade economic drag lands.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">Nonfarm Payrolls</div><div class="mc-freq">Monthly · BLS · 1st Fri</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 2</div><div class="mc-date">Apr data · done</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-ok">+178K</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-na">~150K</div><div class="mc-date">Consensus</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">Pending</div><div class="mc-date">May 2 print</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&gt;250K — strong (QT bias)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">50–250K — normal</span></div>
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&lt;50K — weak (QE bias)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-neu">● Neutral</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">+178K Mar = healthy. Apr first print with war/blockade impact. Miss below 100K = recession signal. JOLTS hiring rate at 3.1% — GFC lows.</div></div>
+</div>
+</div>
+
+<!-- ── INFLATION ── -->
+<div class="cat-block">
+<span class="cat-label cat-infl">⬟ Inflation</span>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">CPI YoY</div><div class="mc-freq">Monthly · BLS · ~12th</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 12</div><div class="mc-date">Apr data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-hot">3.3%</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-hot">~3.6%</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">May 12</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;2% — high inflation (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">~2% — on target (neutral)</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;2% — low inflation (QE)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-qt">▲ QT Bias</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">3.3% Mar was highest since Apr 24. Gasoline +21.2% MoM. Apr likely 3.5–4% — first full blockade month. Core is contained at 2.6%.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">Core CPI YoY</div><div class="mc-freq">Monthly · BLS · ~12th</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 12</div><div class="mc-date">Apr data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-warm">2.6%</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-warm">~2.8%</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">May 12</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;2% — high inflation (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">~2% — on target (neutral)</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;2% — low inflation (QE)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-qt">▲ QT Bias</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">2.6% = above target but not alarming. Key level: above 3.0% = hike risk. Below 2.5% = Fed relief. Energy passthrough into core is the watch item.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">PPI MoM</div><div class="mc-freq">Monthly · BLS · ~13th</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 13</div><div class="mc-date">Apr data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-ok">-0.4%</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-warm">+0.3%</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">May 13</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;0.2% MoM — high (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">0–0.2% — normal</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;0% — deflationary (QE)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-watch">◆ Watch</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">Mar PPI -0.4% was a relief print. Apr expected to reverse as oil shock flows through supply chain. Leading indicator for CPI 1–2 months ahead.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">Core PCE YoY</div><div class="mc-freq">Monthly · BEA · last Fri</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">Late May</div><div class="mc-date">Apr data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-hot">3.0%</div><div class="mc-date">Feb 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-hot">~3.3%</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">Late May</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;2% — high inflation (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">~2% — on target (neutral)</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;2% — low inflation (QE)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-qt">▲ QT / Hike Risk</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">Fed's preferred gauge. 3.0% Feb = annualised 4%+ over 3 months. Q2 forecast 3.7%. Above 3.3% = Warsh hike signal at Jun 17 FOMC.</div></div>
+</div>
+</div>
+
+<!-- ── ECONOMIC ACTIVITIES ── -->
+<div class="cat-block">
+<span class="cat-label cat-act">⬟ Economic Activities</span>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">ISM Manufacturing PMI</div><div class="mc-freq">Monthly · ISM · 1st biz day</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">Jun 1</div><div class="mc-date">May data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-hot">49.0</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-hot">~48.5</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">Jun 1</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&gt;55 — strong expansion (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">50–55 — expansion</span></div>
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&lt;50 — contraction (QE bias)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-watch">◆ Contraction</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">Below 50 = manufacturing contracting. War/oil shock weighing on factory orders. Watch new orders sub-index — leading indicator by 1–2 months.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">ISM Services PMI</div><div class="mc-freq">Monthly · ISM · 3rd biz day</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">Jun 4</div><div class="mc-date">May data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-ok">53.5</div><div class="mc-date">Mar 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-warm">~52.0</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">Jun 4</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&gt;55 — strong expansion (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">50–55 — expansion</span></div>
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&lt;50 — contraction (QE bias)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-neu">● Neutral</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">Services holding above 50. Watch price paid sub-index — rising = stagflation signal. If services drops below 50 while inflation stays high, Fed is trapped.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">Consumer Confidence</div><div class="mc-freq">Monthly · Conference Bd · last Tue</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 27</div><div class="mc-date">May data</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-hot">~92</div><div class="mc-date">Apr 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-hot">~89</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">May 27</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&gt;120 — strong sentiment (QT)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">100–120 — OK sentiment</span></div>
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&lt;100 — negative sentiment (QE)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-watch">◆ Deteriorating</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">~92 = below 100 threshold — negative territory. $4+ gasoline, war anxiety, layoff fears. Below 80 = recession signal. Watch expectations vs current conditions split.</div></div>
+</div>
+
+<div class="metric-row">
+  <div class="mc"><div class="mc-name">UMich Inf. Expectations</div><div class="mc-freq">Monthly · UMich · 2nd Fri</div></div>
+  <div class="mc"><div class="mc-lbl">Release</div><div class="mc-val" style="font-size:11px;color:#c8d0e0">May 8</div><div class="mc-date">Prelim</div></div>
+  <div class="mc"><div class="mc-lbl">Previous</div><div class="mc-val v-hot">~4.4%</div><div class="mc-date">Apr 2026</div></div>
+  <div class="mc"><div class="mc-lbl">Expected</div><div class="mc-val v-hot">~4.5%</div><div class="mc-date">Consensus est.</div></div>
+  <div class="mc"><div class="mc-lbl">Actual</div><div class="mc-val v-pending">May 8</div><div class="mc-date">Not yet</div></div>
+  <div class="thresh">
+    <div class="t-row"><span class="t-dot t-hot"></span><span class="t-text">&gt;4.5% — unanchored (HIKE)</span></div>
+    <div class="t-row"><span class="t-dot t-ok"></span><span class="t-text">3–4.5% — elevated watch</span></div>
+    <div class="t-row"><span class="t-dot t-low"></span><span class="t-text">&lt;3% — anchored (neutral)</span></div>
+  </div>
+  <div class="mc" style="align-items:flex-start;padding:.55rem .7rem"><span class="signal sig-qt">▲ Hike Risk</span><div style="font-size:9.5px;color:#667;margin-top:5px;line-height:1.4">FOMC explicitly flagged this. Above 4.5% = Fed hike trigger regardless of other data. $4 gasoline driving expectations. Most underrated catalyst this week.</div></div>
+</div>
+</div>
+
+<!-- QE/QT SUMMARY -->
+<div style="background:#0f1520;border-radius:8px;padding:.85rem 1rem;margin-top:.5rem">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#445;margin-bottom:.6rem">Current QE/QT Regime Scorecard</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem">
+    <div style="text-align:center;padding:.5rem;background:#1a1e28;border-radius:6px"><div style="font-size:9px;color:#556;margin-bottom:3px">Job Market</div><div style="font-size:13px;font-weight:700;color:#e8a835">Neutral</div><div style="font-size:9px;color:#556;margin-top:2px">Slowing hire rate</div></div>
+    <div style="text-align:center;padding:.5rem;background:#1a1e28;border-radius:6px"><div style="font-size:9px;color:#556;margin-bottom:3px">Inflation</div><div style="font-size:13px;font-weight:700;color:#f07060">QT / Hike Risk</div><div style="font-size:9px;color:#556;margin-top:2px">CPI 3.3%, PCE 3.0%</div></div>
+    <div style="text-align:center;padding:.5rem;background:#1a1e28;border-radius:6px"><div style="font-size:9px;color:#556;margin-bottom:3px">Activity</div><div style="font-size:13px;font-weight:700;color:#e8a835">Weakening</div><div style="font-size:9px;color:#556;margin-top:2px">Mfg PMI &lt;50</div></div>
+    <div style="text-align:center;padding:.5rem;background:#1a1e28;border-radius:6px"><div style="font-size:9px;color:#556;margin-bottom:3px">Overall Signal</div><div style="font-size:13px;font-weight:700;color:#e8a835">In Between</div><div style="font-size:9px;color:#556;margin-top:2px">Stagflation watch</div></div>
+  </div>
+</div>
+
+</div><!-- end macro view -->
+
+
+<!-- ═══════════════════════════════════════════════ -->
+<!--  TAB 2 — CATALYST CALENDAR                     -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="view-catalyst" class="view">
+<div class="pg-title">Catalyst Calendar · May 2026</div>
+<div class="pg-sub">Click any event to expand trade setup</div>
+
+<div class="cal-tabs">
+  <button class="cal-tab active" onclick="switchCal('week',event)">This Week · May 5–9</button>
+  <button class="cal-tab" onclick="switchCal('month',event)">Full Month · May</button>
+</div>
+
+<div class="legend">
+  <span style="font-size:10px;color:#445;font-weight:700;margin-right:3px">CAT:</span>
+  <span class="leg"><span class="leg-sq" style="background:#f5a623"></span>AI/Earnings</span>
+  <span class="leg"><span class="leg-sq" style="background:#4a9de8"></span>Crypto/Reg</span>
+  <span class="leg"><span class="leg-sq" style="background:#f07060"></span>Inflation/Data</span>
+  <span class="leg"><span class="leg-sq" style="background:#a87ee8"></span>Fed/Policy</span>
+  <span class="leg"><span class="leg-sq" style="background:#4cba8c"></span>Geopolitics</span>
+  <span class="leg"><span class="leg-sq" style="background:#c080e0"></span>IPO</span>
+</div>
+
+<!-- WEEK VIEW -->
+<div id="cal-week" class="cal-view active">
+<div class="pg-sub" style="margin-bottom:.9rem">Summary always visible · click <strong style="color:#556">Trade ideas ▼</strong> to expand</div>
+<div class="timeline">
+
+  <!-- PLTR -->
+  <div class="ev c-ai">
+    <div class="ev-date"><div class="ev-d1">May 4</div><div class="ev-d2">Mon · done</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Palantir (PLTR) Q1 earnings AMC</div>
+        <div class="ev-hmeta"><span class="ev-move">Read-through</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">What to watch</div><div class="sum-val">US govt + AIP platform</div><div class="sum-sub">Iran war = sustained defence AI spend. PLTR +1.36% on day.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Bull → AMD</div><div class="sum-val">Govt deal acceleration</div><div class="sum-sub">Beat = enter AMD / NVDA longs into May 5–20 window</div></div>
+        <div class="sum-item"><div class="sum-lbl">Bear → AMD</div><div class="sum-val">Miss or weak guide</div><div class="sum-sub">Drags AMD open lower — wait before entering semis</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Setup</div><div class="tg-val">AMD/NVDA demand read</div><div class="tg-sub">PLTR govt AI = defence capex proxy for whole semi sector</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bull trigger</div><div class="tg-val">AIP + war spend beats</div><div class="tg-sub">Long AMD pre-market May 5 if PLTR beat is confirmed</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bear trigger</div><div class="tg-val">Revenue miss / weak guide</div><div class="tg-sub">Stay flat on AMD open. Wait for reaction before entering.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMD -->
+  <div class="ev c-ai">
+    <div class="ev-date"><div class="ev-d1">May 5</div><div class="ev-d2">Tue · TODAY</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">AMD Q1 earnings AMC — the NVDA setup trade</div>
+        <div class="ev-hmeta"><span class="ev-move">±8–12%</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">The setup</div><div class="sum-val">Long NVDA on AMD beat</div><div class="sum-sub">AMD beat → enter NVDA → hold 15 days into May 20 print</div></div>
+        <div class="sum-item"><div class="sum-lbl">Key metric</div><div class="sum-val">Data centre rev vs $5B</div><div class="sum-sub">MI300X above $5B = AI cycle confirmed. NVDA re-rates up.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Risk</div><div class="sum-val">China export flag</div><div class="sum-sub">New curbs = trim semis. Oil macro caution = sell-the-news.</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Bull trigger</div><div class="tg-val">Beat + raised guide</div><div class="tg-sub">Hyperscaler commentary bullish → enter NVDA next day</div></div>
+          <div class="tg-item"><div class="tg-lbl">NVDA sympathy</div><div class="tg-val">±3–5% next day</div><div class="tg-sub">AMD beat = NVDA opens higher. Miss = NVDA opens lower.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bear trigger</div><div class="tg-val">China export flag</div><div class="tg-sub">Sector-wide multiple compression — stay flat on NVDA</div></div>
+          <div class="tg-item"><div class="tg-lbl">Also watch</div><div class="tg-val">AVGO / MRVL reads</div><div class="tg-sub">Custom silicon names move ±5% on AMD direction</div></div>
+          <div class="tg-item"><div class="tg-lbl">Consensus</div><div class="tg-val">$9.88B · EPS $1.28</div><div class="tg-sub">+33% YoY. Beat 4 straight qtrs (avg +5.96% EPS surprise).</div></div>
+          <div class="tg-item"><div class="tg-lbl">Oil risk</div><div class="tg-val">$110 Brent = caution</div><div class="tg-sub">Mgmt flagging capex uncertainty = sell even on revenue beat</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HORMUZ -->
+  <div class="ev c-geo">
+    <div class="ev-date"><div class="ev-d1">May 6</div><div class="ev-d2">Wed · ongoing</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Iran Hormuz — Trump decision on proposal pending</div>
+        <div class="ev-hmeta"><span class="ev-move">Oil ±$15–20</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Override status</div><div class="sum-val">Gates ALL May catalysts</div><div class="sum-sub">Changes AMD, NVDA, CPI, SpaceX IPO multiple simultaneously</div></div>
+        <div class="sum-item"><div class="sum-lbl">Deal → long</div><div class="sum-val">QQQ / JETS / consumer</div><div class="sum-sub">Brent -$15–20 → CPI cools → Jun cut back in play</div></div>
+        <div class="sum-item"><div class="sum-lbl">No deal → long</div><div class="sum-val">USO / XOM / CVX</div><div class="sum-sub">Oil $120 → energy outperforms. Short JETS / airlines.</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Deal scenario</div><div class="tg-val">Short USO / long JETS</div><div class="tg-sub">Brent -$15–20 instantly on Truth Social announcement</div></div>
+          <div class="tg-item"><div class="tg-lbl">No deal</div><div class="tg-val">Long USO / PDBC / XOM</div><div class="tg-sub">Oil $120 → energy wins. Stagflation = JPMorgan hike thesis live.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Why now</div><div class="tg-val">Iran storage at max capacity</div><div class="tg-sub">First real economic pressure on Tehran. Can break any moment.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COIN -->
+  <div class="ev c-crypto">
+    <div class="ev-date"><div class="ev-d1">May 7</div><div class="ev-d2">Thu</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Coinbase (COIN) Q1 earnings AMC</div>
+        <div class="ev-hmeta"><span class="ev-move">±10–15%</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Setup</div><div class="sum-val">Wait for flush, then buy</div><div class="sum-sub">Already +7.6% pre-earnings = elevated sell-the-news risk</div></div>
+        <div class="sum-item"><div class="sum-lbl">Re-entry trigger</div><div class="sum-val">Clarity Act markup May 11</div><div class="sum-sub">Post-earnings dip + markup = double catalyst clean entry</div></div>
+        <div class="sum-item"><div class="sum-lbl">Watch Armstrong on</div><div class="sum-val">Stablecoin restructuring</div><div class="sum-sub">"Buy and use" model timeline = stablecoin revenue signal</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Bull trigger</div><div class="tg-val">Beat + stablecoin roadmap</div><div class="tg-sub">Re-rate toward $216 highs + Clarity Act markup catalyst</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bear trigger</div><div class="tg-val">EPS miss again</div><div class="tg-sub">Prior: -$2.49 vs +$0.99 est. → back to $160s. Accumulate there.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Expected move</div><div class="tg-val">±10–15%</div><div class="tg-sub">Prior earnings day: +16.5%. High IV environment.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UMICH -->
+  <div class="ev c-data">
+    <div class="ev-date"><div class="ev-d1">May 8</div><div class="ev-d2">Fri · prelim</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">UMich inflation expectations — underrated Fed trigger</div>
+        <div class="ev-hmeta"><span class="ev-move">Hike risk</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Key level</div><div class="sum-val">4.5% 1-yr expectation</div><div class="sum-sub">Fed minutes: above 4.5% = hike trigger. Prev 4.4%. Exp 4.5%.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Hot print (&gt;4.5%)</div><div class="sum-val">Short TLT / long TBF</div><div class="sum-sub">Unanchored → yields spike → growth multiple hit</div></div>
+        <div class="sum-item"><div class="sum-lbl">Cool print (&lt;4.0%)</div><div class="sum-val">Long TLT / QQQ</div><div class="sum-sub">Anchored = Jun cut stays in play → relief rally</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Above 4.5%</div><div class="tg-val">Short TLT / long TBF</div><div class="tg-sub">Hike becomes 2026 base case → duration reprices hard</div></div>
+          <div class="tg-item"><div class="tg-lbl">Below 4.0%</div><div class="tg-val">Long TLT / long QQQ</div><div class="tg-sub">Jun cut window reopens → growth re-rates immediately</div></div>
+          <div class="tg-item"><div class="tg-lbl">Why it matters</div><div class="tg-val">Most underrated this week</div><div class="tg-sub">Markets not positioned for hike — unanchoring hits harder than CPI miss</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end week timeline -->
+</div><!-- end cal-week -->
+
+<!-- MONTH VIEW -->
+<div id="cal-month" class="cal-view">
+<div class="timeline">
+
+  <div class="ev c-ai">
+    <div class="ev-date"><div class="ev-d1">May 5</div><div class="ev-d2">Tue · TODAY</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">AMD Q1 earnings — the NVDA setup trade</div>
+        <div class="ev-hmeta"><span class="ev-move">±8–12%</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Setup</div><div class="sum-val">Long NVDA on beat</div><div class="sum-sub">15-day window between AMD (May 5) and NVDA (May 20)</div></div>
+        <div class="sum-item"><div class="sum-lbl">Key metric</div><div class="sum-val">Data centre rev vs $5B</div><div class="sum-sub">MI300X traction = AI demand confirmed. Enter NVDA.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Risk</div><div class="sum-val">China export flag</div><div class="sum-sub">New curbs = trim semis, do not chase NVDA into May 20</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Bull trigger</div><div class="tg-val">Beat + raised guide</div><div class="tg-sub">Enter NVDA pre-May 20. Clean 15-day setup.</div></div>
+          <div class="tg-item"><div class="tg-lbl">NVDA sympathy</div><div class="tg-val">±3–5% next day</div><div class="tg-sub">AMD beat opens NVDA higher — ideal pre-earnings entry</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bear trigger</div><div class="tg-val">China export or oil caution</div><div class="tg-sub">Stay flat on NVDA. Reassess after call transcript.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ev c-crypto">
+    <div class="ev-date"><div class="ev-d1">May 7</div><div class="ev-d2">Thu</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Coinbase (COIN) Q1 earnings AMC</div>
+        <div class="ev-hmeta"><span class="ev-move">±10–15%</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Setup</div><div class="sum-val">Wait for flush, then buy</div><div class="sum-sub">Already +7.6% = sell-the-news risk. Dip = cleaner entry.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Re-entry</div><div class="sum-val">Clarity Act markup May 11</div><div class="sum-sub">Post-earnings dip + markup = double catalyst entry point</div></div>
+        <div class="sum-item"><div class="sum-lbl">Bear</div><div class="sum-val">EPS miss → $160s</div><div class="sum-sub">Use as accumulation zone ahead of Clarity Act re-rate</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Bull trigger</div><div class="tg-val">Beat + stablecoin roadmap</div><div class="tg-sub">Re-rate toward $216. Stablecoin rev = long-duration story.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bear trigger</div><div class="tg-val">EPS miss again</div><div class="tg-sub">Prior: -$2.49 vs +$0.99 est. → $160s. Accumulate.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Expected move</div><div class="tg-val">±10–15%</div><div class="tg-sub">Prior earnings day: +16.5% — high IV, high beta</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wk-div">Week 2</div>
+
+  <div class="ev c-crypto">
+    <div class="ev-date"><div class="ev-d1">May 11 wk</div><div class="ev-d2">Week of</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">CLARITY Act — Senate Banking Committee markup</div>
+        <div class="ev-hmeta"><span class="ev-move">COIN / BTC / ETH</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Odds</div><div class="sum-val">68% passage (Polymarket)</div><div class="sum-sub">Stablecoin yield deal done. 100+ groups demanding markup now.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Markup confirmed</div><div class="sum-val">Long COIN / MSTR / IBIT</div><div class="sum-sub">SEC/CFTC clarity = bank adoption unlocks = sector re-rate</div></div>
+        <div class="sum-item"><div class="sum-lbl">Markup delayed</div><div class="sum-val">Crypto -10–15%</div><div class="sum-sub">Midterm dynamics freeze bill for years — regulatory discount widens</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Long play</div><div class="tg-val">COIN / MSTR / IBIT</div><div class="tg-sub">Markup = institutional on-ramp opens. Banks adopt. Re-rate.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Bull trigger</div><div class="tg-val">Markup announced this week</div><div class="tg-sub">Floor vote → Trump signature summer 2026</div></div>
+          <div class="tg-item"><div class="tg-lbl">Binary risk</div><div class="tg-val">Missing May = years of delay</div><div class="tg-sub">Moreno: midterms freeze anything DeFi-adjacent post-May</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ev c-data">
+    <div class="ev-date"><div class="ev-d1">May 12</div><div class="ev-d2">Tue</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">April CPI — first full blockade-month inflation print</div>
+        <div class="ev-hmeta"><span class="ev-move">Hike trigger</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Context</div><div class="sum-val">Brent averaged $100–110 in Apr</div><div class="sum-sub">Gas above $4 all month. Most important data print of 2026.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Hot (&gt;3.5%)</div><div class="sum-val">Short TLT / long TBF</div><div class="sum-sub">Hike language enters Jun 17 FOMC. Yields spike. Growth sells.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Cool (&lt;2.8% core)</div><div class="sum-val">Long QQQ / TLT</div><div class="sum-sub">Jun cut back in play → massive relief rally in growth / tech</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Key level</div><div class="tg-val">Core CPI 3.0%</div><div class="tg-sub">Above = Warsh hike signal at Jun 17 FOMC. No middle ground.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Hot print</div><div class="tg-val">Short TLT / long SQQQ</div><div class="tg-sub">Hike risk → multiple compression across growth names</div></div>
+          <div class="tg-item"><div class="tg-lbl">Cool print</div><div class="tg-val">Long QQQ / NVDA / growth</div><div class="tg-sub">Oil-driven = transitory → Warsh holds → relief rally</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ev c-fed">
+    <div class="ev-date"><div class="ev-d1">May 15</div><div class="ev-d2">Fri</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Kevin Warsh — first day as Fed Chair (if confirmed)</div>
+        <div class="ev-hmeta"><span class="ev-move">Bond market</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Warsh confirmed</div><div class="sum-val">Short TLT / long TIPS</div><div class="sum-sub">Hawkish → term premium rises → 30-yr breaks 5%</div></div>
+        <div class="sum-item"><div class="sum-lbl">Not confirmed</div><div class="sum-val">Long TLT relief trade</div><div class="sum-sub">Powell pro tem = status quo. Warsh premium unwinds.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Watch</div><div class="sum-val">First Warsh speech tone</div><div class="sum-sub">Inflation vs jobs priority = hawkish/dovish for Jun 17 FOMC</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Confirmed</div><div class="tg-val">Short TLT / long TIPS</div><div class="tg-sub">Less inflation-tolerant + simultaneous QT = 30-yr breaks 5%</div></div>
+          <div class="tg-item"><div class="tg-lbl">Not confirmed</div><div class="tg-val">Bond relief / long TLT</div><div class="tg-sub">Powell pro tem = known quantity → Warsh premium unwinds</div></div>
+          <div class="tg-item"><div class="tg-lbl">First speech</div><div class="tg-val">Listen for inflation priority</div><div class="tg-sub">Inflation first = hike risk. Jobs first = hold extended. That simple.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wk-div">Week 3</div>
+
+  <div class="ev c-ai">
+    <div class="ev-date"><div class="ev-d1">May 20</div><div class="ev-d2">Wed</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Nvidia (NVDA) Q1 FY2027 earnings AMC — most important print of Q1</div>
+        <div class="ev-hmeta"><span class="ev-move">±10%</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Setup</div><div class="sum-val">Long NVDA after AMD beat (May 5)</div><div class="sum-sub">AMD is the pre-trade. Enter after AMD, hold 15 days into May 20.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Bull trigger</div><div class="sum-val">Blackwell rev + guide raise</div><div class="sum-sub">Data centre &gt;$40B + hyperscaler commentary = ATH run</div></div>
+        <div class="sum-item"><div class="sum-lbl">Bear trigger</div><div class="sum-val">China H20 ban expansion</div><div class="sum-sub">$10–15B revenue at risk → sector-wide selloff. AVGO/MRVL -5–8%.</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Expected move</div><div class="tg-val">±10% NVDA</div><div class="tg-sub">Options pricing ~9.5%. Moves ±10% on earnings regularly.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Sympathy</div><div class="tg-val">AVGO / MRVL ±5–8%</div><div class="tg-sub">Custom silicon moves hard on NVDA sentiment</div></div>
+          <div class="tg-item"><div class="tg-lbl">Oil overlay</div><div class="tg-val">$110 Brent = capex caution</div><div class="tg-sub">Mgmt flagging oil = sell even on revenue beat</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ev c-ipo">
+    <div class="ev-date"><div class="ev-d1">Late May</div><div class="ev-d2">TBC</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">SpaceX S-1 published — roadshow Jun 8 week</div>
+        <div class="ev-hmeta"><span class="ev-move">Liquidity drain</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">The play</div><div class="sum-val">Watch growth for pre-S-1 flush</div><div class="sum-sub">Institutions raise $75B cash → sells QQQ / ARKK / growth in May</div></div>
+        <div class="sum-item"><div class="sum-lbl">IPO secondary</div><div class="sum-val">Pre-IPO ~$185/share</div><div class="sum-sub">$75B raise. Starlink $10B+ rev. Largest IPO in history if priced.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Risk</div><div class="sum-val">Oil macro compresses multiple</div><div class="sum-sub">Brent $110+ = rates stay high = $1.75T under pressure → slip to 2027</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Pre-S-1</div><div class="tg-val">Watch growth for flush</div><div class="tg-sub">Institutions liquidate QQQ/ARKK to fund SpaceX allocation</div></div>
+          <div class="tg-item"><div class="tg-lbl">Post-pricing Jun 12</div><div class="tg-val">Growth relief rally</div><div class="tg-sub">Liquidity drain ends → rotation back into growth names</div></div>
+          <div class="tg-item"><div class="tg-lbl">Hormuz link</div><div class="tg-val">Deal = IPO works at $1.75T</div><div class="tg-sub">No deal = rate premium kills multiple → slip to 2027</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ev c-data">
+    <div class="ev-date"><div class="ev-d1">Late May</div><div class="ev-d2">Sat TBC</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">April core PCE — Warsh's first inflation test</div>
+        <div class="ev-hmeta"><span class="ev-move">Hike trigger</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Context</div><div class="sum-val">Core PCE 3.0% YoY in Feb</div><div class="sum-sub">Ann. pace 4%+. Q2 forecast 3.7%. First blockade-month PCE.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Hot (&gt;3.3%)</div><div class="sum-val">Short TLT / long PDBC</div><div class="sum-sub">Warsh forced to act at Jun 17 FOMC. 2026 hike live.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Cool (&lt;2.9%)</div><div class="sum-val">Long QQQ / TLT</div><div class="sum-sub">Warsh cautious → Jun FOMC hold → growth re-rates</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Key level</div><div class="tg-val">3.1% core PCE</div><div class="tg-sub">Above = Warsh hike Jun 17. Below = hold confirmed. No middle.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Hot print</div><div class="tg-val">Short TLT / long PDBC</div><div class="tg-sub">2026 hike collapses into new consensus rapidly</div></div>
+          <div class="tg-item"><div class="tg-lbl">Cool print</div><div class="tg-val">Long QQQ / NVDA / growth</div><div class="tg-sub">Fed holds → SpaceX IPO window opens cleanly for Jun</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wk-div">All month — override catalyst</div>
+
+  <div class="ev c-geo">
+    <div class="ev-date"><div class="ev-d1">All May</div><div class="ev-d2">No set date</div></div>
+    <div class="ev-dot"></div>
+    <div class="ev-card">
+      <div class="ev-top">
+        <div class="ev-htitle">Iran Hormuz deal — overrides every other catalyst this month</div>
+        <div class="ev-hmeta"><span class="ev-move">Brent ±$15–20</span></div>
+      </div>
+      <div class="ev-summary">
+        <div class="sum-item"><div class="sum-lbl">Override</div><div class="sum-val">Gates AMD, NVDA, CPI, SpaceX</div><div class="sum-sub">Deal = all longs work. No deal = energy only. Everything hinges here.</div></div>
+        <div class="sum-item"><div class="sum-lbl">Deal → buy</div><div class="sum-val">QQQ / JETS / consumer</div><div class="sum-sub">Oil -$15–20 → CPI cools → Jun cut → growth re-rate</div></div>
+        <div class="sum-item"><div class="sum-lbl">No deal → buy</div><div class="sum-val">USO / XOM / PDBC</div><div class="sum-sub">Oil $120 → energy wins → stagflation → JPMorgan hike thesis live</div></div>
+      </div>
+      <div class="ev-trigger" onclick="toggle(this)"><span class="ev-trigger-lbl">Trade ideas</span><span class="ev-chevron">▼</span></div>
+      <div class="ev-body">
+        <div class="trade-grid">
+          <div class="tg-item"><div class="tg-lbl">Deal scenario</div><div class="tg-val">Long QQQ / JETS / consumer</div><div class="tg-sub">Instant Brent -$15–20. CPI path changes. Jun cut repriced in minutes.</div></div>
+          <div class="tg-item"><div class="tg-lbl">No deal</div><div class="tg-val">Long USO / XOM / PDBC</div><div class="tg-sub">Oil $120. Energy sector wins. Short JETS / airlines / consumer.</div></div>
+          <div class="tg-item"><div class="tg-lbl">Watch signal</div><div class="tg-val">Truth Social + NSC</div><div class="tg-sub">Iran storage at max capacity — economic pressure at peak right now.</div></div>
+        </div>
+        <div class="ev-context">Single biggest variable in 2026 macro. Deal = everything re-rates simultaneously. No deal = stagflation confirmed, JPMorgan hike thesis becomes the new consensus.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end month timeline -->
+</div><!-- end cal-month -->
+
+</div><!-- end catalyst view -->
+</div><!-- end page -->
+
+<script>
+function switchTab(t,e){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+t).classList.add('active');
+  e.target.classList.add('active');
+}
+function switchCal(t,e){
+  document.querySelectorAll('.cal-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.cal-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('cal-'+t).classList.add('active');
+  e.target.classList.add('active');
+}
+function toggle(trigger){
+  const body = trigger.nextElementSibling;
+  const chev = trigger.querySelector('.ev-chevron');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+</script>
+</body>
+</html>
